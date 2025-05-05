@@ -48,6 +48,13 @@
  */
 #define TA_OTP_KEYWRITING_CMD_LOCK_ROW		2
 
+/*
+ * TA_OTP_KEYWRITING_CMD_WRITE_KEYREV - Write Key Revision
+ * [in] param[0].a Key Revision value to be written
+ * [in] memref[1]  Dual signed certificate
+ */
+#define TA_OTP_KEYWRITING_CMD_WRITE_KEYREV	3
+
 #define K3_OTP_KEYWRITING_SOFT_LOCK		BIT(0)
 #define K3_OTP_KEYWRITING_HW_READ_LOCK		BIT(1)
 #define K3_OTP_KEYWRITING_HW_WRITE_LOCK		BIT(2)

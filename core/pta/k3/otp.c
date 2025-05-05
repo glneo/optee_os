@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <k3/otp_keywriting_ta.h>
 #include <kernel/pseudo_ta.h>
+#include <mm/core_memprot.h>
 
 static TEE_Result write_otp_row(uint32_t param_types, TEE_Param params[4])
 {
@@ -96,6 +97,46 @@ static TEE_Result lock_otp_row(uint32_t param_types, TEE_Param params[4])
 	return TEE_SUCCESS;
 }
 
+static TEE_Result set_keyrev(uint32_t param_types, TEE_Param params[4])
+{
+	uint32_t keyrev = 0;
+	void *dual_cert_ptr = NULL;
+	paddr_t pa = 0;
+	uint32_t cert_addr_hi = 0;
+	uint32_t cert_addr_lo = 0;
+	TEE_Result ret = TEE_SUCCESS;
+
+	/* Check invocation parameters */
+	if (param_types != TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INPUT,
+					   TEE_PARAM_TYPE_MEMREF_INPUT,
+					   TEE_PARAM_TYPE_NONE,
+					   TEE_PARAM_TYPE_NONE))
+		return TEE_ERROR_BAD_PARAMETERS;
+
+	keyrev = params[0].value.a;
+	dual_cert_ptr = params[1].memref.buffer;
+
+	pa = virt_to_phys(dual_cert_ptr);
+	if (!pa)
+		return TEE_ERROR_BAD_PARAMETERS;
+	reg_pair_from_64(pa, &cert_addr_hi, &cert_addr_lo);
+
+	DMSG("Setting Key Revision: %"PRIu32, keyrev);
+
+	DMSG("dual_cert_ptr: %p", dual_cert_ptr);
+	DMSG("cert_addr_hi: %"PRIu32, cert_addr_hi);
+	DMSG("cert_addr_lo: %"PRIu32, cert_addr_lo);
+	DMSG("dual_cert_size: %zu", params[1].memref.size);
+
+	ret = ti_sci_set_keyrev(keyrev, cert_addr_hi, cert_addr_lo);
+	if (ret)
+		return ret;
+
+	DMSG("Set Key Revision: %"PRIu32, keyrev);
+
+	return TEE_SUCCESS;
+}
+
 static TEE_Result invoke_command(void *session __unused,
 				 uint32_t command, uint32_t param_types,
 				 TEE_Param params[4])
@@ -107,6 +148,8 @@ static TEE_Result invoke_command(void *session __unused,
 		return write_otp_row(param_types, params);
 	case TA_OTP_KEYWRITING_CMD_LOCK_ROW:
 		return lock_otp_row(param_types, params);
+	case TA_OTP_KEYWRITING_CMD_WRITE_KEYREV:
+		return set_keyrev(param_types, params);
 	default:
 		EMSG("Command ID 0x%"PRIx32" is not supported", command);
 		return TEE_ERROR_NOT_SUPPORTED;
